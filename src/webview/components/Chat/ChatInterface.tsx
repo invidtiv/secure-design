@@ -26,6 +26,7 @@ import {
     ModelSelect,
     type ProviderId,
     type ModelPickerTelemetry,
+    type ModelConfig,
 } from 'ai-sdk-react-model-picker';
 import mpStyles from 'ai-sdk-react-model-picker/styles.css';
 import {
@@ -36,6 +37,98 @@ import {
     type WebviewLayout,
 } from 'react-vscode-webview-ipc/client';
 import { ChatContextKey } from '../../context-keys';
+
+function initializeRegistryWithCustomModels() {
+    const registry = createDefaultRegistry();
+
+    try {
+        // Helper to add models safely
+        const addModels = (providerId: string, models: Partial<ModelConfig>[]) => {
+            try {
+                const provider = registry.getProvider(providerId as ProviderId);
+                // Cast to any to bypass readonly if necessary, or push to the array
+                const providerModels = (provider as any).models;
+                if (Array.isArray(providerModels)) {
+                    models.forEach(m => {
+                        // Check if model already exists
+                        if (!providerModels.find((pm: any) => pm.id === m.id)) {
+                             providerModels.push(m);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn(`Provider ${providerId} not found or failed to add models`, e);
+            }
+        };
+
+        // OpenAI Models
+        addModels('openai', [
+            {
+                id: 'gpt-5.2-2025-09-15' as ModelId,
+                displayName: 'GPT-5.2',
+                isDefault: true,
+                maxTokens: 128000,
+            },
+            {
+                id: 'gpt-5.2-mini-2025-08-07' as ModelId,
+                displayName: 'GPT-5.2 Mini',
+            },
+            {
+                id: 'gpt-5.2-nano-2025-08-07' as ModelId,
+                displayName: 'GPT-5.2 Nano',
+            }
+        ]);
+
+        // Anthropic Models
+        addModels('anthropic', [
+            {
+                id: 'claude-sonnet-4-5-20250929' as ModelId,
+                displayName: 'Claude 4.5 Sonnet',
+                isDefault: true,
+            },
+             {
+                id: 'claude-haiku-4-5-20250929' as ModelId,
+                displayName: 'Claude 4.5 Haiku',
+            },
+             {
+                id: 'claude-opus-4-1-20250805' as ModelId,
+                displayName: 'Claude 4.1 Opus',
+            }
+        ]);
+
+        // Google Models
+        addModels('google', [
+             {
+                id: 'gemini-3-pro-preview' as ModelId,
+                displayName: 'Gemini 3 Pro Preview',
+            },
+            {
+                id: 'gemini-3-flash-preview' as ModelId,
+                displayName: 'Gemini 3 Flash Preview',
+            },
+             {
+                id: 'gemini-2.5-pro' as ModelId,
+                displayName: 'Gemini 2.5 Pro',
+            },
+             {
+                id: 'gemini-2.5-flash-image' as ModelId,
+                displayName: 'Gemini 2.5 Flash Image',
+            },
+             {
+                id: 'gemini-2.5-flash-lite' as ModelId,
+                displayName: 'Gemini 2.5 Flash Lite',
+            }
+        ]);
+
+    } catch (e) {
+        console.error("Failed to add custom models", e);
+    }
+
+    return registry;
+}
+
+// Initialize registry once outside component
+const defaultCustomRegistry = initializeRegistryWithCustomModels();
 
 interface ChatInterfaceProps {
     layout: WebviewLayout;
@@ -117,7 +210,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ layout }) => {
         () => [state.messages, (state.messages?.length ?? 0) > 0, state.messages === undefined],
         [state]
     );
-    const providerRegistry = useRef(createDefaultRegistry());
+    // Use the static registry
+    const providerRegistry = useRef(defaultCustomRegistry);
     const msLogger = useLogger('ModelSelect');
     const modelSelectTelemetry = useMemo(() => {
         return {
