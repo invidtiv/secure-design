@@ -314,6 +314,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ layout }) => {
                             contentParts.push({
                                 type: 'image',
                                 image: base64Content,
+                                mediaType: mimeType,
                             });
 
                             logger.debug('📎 Added image to message:', { imagePath, mimeType });
